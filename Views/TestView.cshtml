@@ -1,7 +1,414 @@
-﻿
-@{
-    ViewBag.Title = "TestView";
+﻿@{
+    Layout = null;
 }
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>特殊产品刀片管控</title>
+    <meta name="viewport" content="width=device-width" />
+    <link href="~/Content/bootstrap.css" rel="stylesheet" />
+    <link href="~/Content/public.css" rel="stylesheet" />
+    <script src="~/Scripts/jquery-3.2.1.min.js"></script>
+    <script src="~/Scripts/bootstrap.js"></script>
+    <script src="~/Scripts/datatables/dataTables.js"></script>
+    <link href="~/Scripts/datatables/dataTables.css" rel="stylesheet" />
+    <link href="~/Scripts/bootstrapselect/bootstrap-select.css" rel="stylesheet" />
+    <script src="~/Scripts/bootstrapselect/bootstrap-select.js"></script>
+    <script src="~/Scripts/layer/layer.js"></script>
+    <script src="~/Scripts/json2.js"></script>
+    <script src="~/Scripts/public.js"></script>
+    <script src="~/Scripts/labelauty/jquery-labelauty.js"></script>
+    <link href="~/Scripts/labelauty/jquery-labelauty.css" rel="stylesheet" />
+    <link href="~/Scripts/datetimepicker/css/bootstrap-datetimepicker.css" rel="stylesheet" />
+    <script src="~/Scripts/datetimepicker/js/bootstrap-datetimepicker.js"></script>
+    <script src="~/Scripts/datetimepicker/js/locales/bootstrap-datetimepicker.zh-CN.js"></script>
+    <script src="~/Scripts/public.js"></script>
+    <script>
+        var userName = '@Session["UserName"]';
+        $(document).ready(function() {
+        });
+        $(function () {
+            $('.form_datetime').datetimepicker({
+                minView: "month", //选择日期后，不会再跳转去选择时分秒
+                format: "yyyy-mm-dd", //选择日期后，文本框显示的日期格式
+                language: 'zh-CN', //汉化
+                autoclose: true //选择日期后自动关闭
+            });
+        });
+        function ChangeFormatDateTime(date) {
+            var y = date.getFullYear();
+            var m = date.getMonth() + 1;
+            var d = date.getDate();
+            d = d < 10 ? ('0' + d) : d;
+            var h = date.getHours();
+            h = h < 10 ? ('0' + h) : h;
+            var minute = date.getMinutes();
+            minute = minute < 10 ? ('0' + minute) : minute;
+            var seconds = date.getSeconds();
+            seconds = seconds < 10 ? ('0' + seconds) : seconds;
 
-<h2>TestView</h2>
+            return y + '-' + m + '-' + d + ' ' + h + ':' + minute + ':' + seconds;  //可自行改变时间格式
+        };
+        function SearchSpecilKnifeList() {
+            var Cust = $("#txtCust").val();
+            var Device = $("#txtDevice").val();
+            $.ajax({
+                url: "../SpecilKnifeManage/GetSpecilKnifeList",
+                data: {
+                    "Cust": Cust,
+                    "Device": Device,
 
+                },
+                type: "Post",
+                success: function (result) {
+                    $("#tbSpecilKnifeList").empty();
+                    var content = "";
+                    for (var i = 0; i < result.Data.length; i++) {
+                        var detail = result.Data[i];
+                       var time
+
+                        content += "<tr>";
+                        content += "<td>" + (i + 1) + "</td>";
+                        content += "<td>" + detail.Cust + "</td>";
+                        content += "<td>" + detail.Device + "</td>";
+                        content += "<td>" + ChangeFormatDateTime(eval("new " + (detail.CreateDate.replace(/\//g, "")))) + "</td>";
+                        content += "<td>" + detail.EmpId + "</td>";
+                        content += "<td>" + detail.Attributes + "</td>";
+                        content += "<td> <a class='btn btn-warning btn-xs'; onclick = 'ShowModifySpecilKnifeInfo(\"" + detail.Id + "\",\"modify\")' > <span class='glyphicon glyphicon-wrench'>修改</a>";
+                        content += "<a class='btn btn-danger btn-xs'; onclick = 'DeleteSpecilKnifeInfo(\"" + detail.Id + "\",\"modify\")' > <span class='glyphicon glyphicon-remove'>删除</a></td >";
+                        content += "</tr>";
+                    }
+                    $("#tbSpecilKnifeList").append(content);
+                }
+            });
+        }
+        function ShowAddInfo() {
+            $("#divAddInfo").modal("show");
+            $("#divAddInfo").children().find("form")[0].reset();
+
+        }
+        function AddInfo() {
+            var Cust = $("#txtAddCust").val();
+            var Device = $("#txtAddDevice").val();
+            var Attributes = $("#txtAddAttributes").val();
+            if ("" == Cust) {
+                layer.alert("客户不能为空",
+                    {
+                        skin: 'layui-layer-lan',
+                        title: '上传结果',
+                        closeBtn: 0,
+                        shift: 6 //动画类型
+                    });
+                return;
+            }
+            if ("" == Device) {
+                layer.alert("型号不能为空",
+                    {
+                        skin: 'layui-layer-lan',
+                        title: '上传结果',
+                        closeBtn: 0,
+                        shift: 6 //动画类型
+                    });
+                return;
+            }
+            var specilknifeInfo = new Object();
+            specilknifeInfo.Cust = Cust;
+            specilknifeInfo.Device = Device;
+            specilknifeInfo.Attributes = Attributes;
+            $.ajax({
+                url: "../SpecilKnifeManage/AddInfo",
+                type: "POST",
+                dataType: "json",
+                data: {
+                    "specilknifeInfo": specilknifeInfo,
+                    "userName": userName
+                },
+                async: false,
+                success: function (result) {
+                    if (result.Result) {
+                        layer.alert('新增成功', {
+                            skin: 'layui-layer-lan',
+                            title: '信息提示',
+                            closeBtn: 0,
+                            icon: 6,
+                            shift: 5, //动画类型
+                            yes: function () {
+                                layer.closeAll();
+                                $('#divAddInfo').modal('hide');
+                                SearchSpecilKnifeList();
+                            }
+                        });
+                    } else {
+                        layer.alert('保存失败:' + result.Msg, {
+                            skin: 'layui-layer-lan',
+                            title: '信息提示',
+                            closeBtn: 0,
+                            icon: 5,
+                            shift: 6 //动画类型
+                        });
+                    }
+                }
+            });
+        }
+
+        var specilknifeInfo;
+        var bAdd;
+        function ShowModifySpecilKnifeInfo(Id, flag) {
+            if (flag === "add") {
+                bAdd = true;
+                ResetModifyLabel();
+            }
+            if (flag === 'modify') {
+                bAdd = false;
+            }
+            $("#divModifySpecilKnifeInfo").modal("show");
+            $.ajax({
+                url: "../SpecilKnifeManage/GetSpecilKnifeList",
+                data: {
+                    "txtCust": "",
+                    "txtDevice": "",
+                    "Id":Id,
+                },
+                type: "Post",
+                success: function (result) {
+                    if (result.Result) {
+                        specilknifeInfo = result.Data[0];
+                        $("#txtModifyCust").val(specilknifeInfo.Cust);
+                        $("#txtModifyDevice").val(specilknifeInfo.Device);
+                        $("#txtModifyAttributes").val(specilknifeInfo.Attributes);
+                        $("#txtModifyId").val(specilknifeInfo.Id);
+                    } else {
+                        layer.alert(result.Msg,
+                            {
+                                skin: "layui-layer-lan",
+                                title: "失败",
+                                closeBtn: 0,
+                                icon: 5,
+                                shift: 6 //动画类型
+                            });
+                    }
+                }
+            });
+
+        }
+
+        function ModifySpecilKnifeInfo() {
+            if (bAdd) {
+                specilknifeInfo = new Object();
+            }
+            specilknifeInfo.Cust = $("#txtModifyCust").val();
+            specilknifeInfo.Device = $("#txtModifyDevice").val();
+            specilknifeInfo.Attributes = $("#txtModifyAttributes").val();
+            specilknifeInfo.Id = $("#txtModifyId").val();
+            $.ajax({
+                url: "../SpecilKnifeManage/ModifyInfo",
+                type: "POST",
+                dataType: "json",
+                data: {
+                    "specilknifeInfo": specilknifeInfo,
+                    "bAdd":bAdd,
+                    "userName": userName
+                },
+                async: false,
+                success: function (result) {
+                    if (result.Result) {
+                        layer.alert('修改成功!', {
+                            skin: 'layui-layer-lan',
+                            title: '信息提示',
+                            closeBtn: 0,
+                            icon: 6,
+                            shift: 5, //动画类型
+                            yes: function () {
+                                layer.closeAll();
+                                $('#divModifySpecilKnifeInfo').modal('hide');
+                                SearchSpecilKnifeList();
+                            }
+                        });
+                    } else {
+                        layer.alert('保存失败:' + result.Msg, {
+                            skin: 'layui-layer-lan',
+                            title: '信息提示',
+                            closeBtn: 0,
+                            icon: 5,
+                            shift: 6 //动画类型
+                        });
+                    }
+                }
+            });
+        }
+
+        function ResetModifyLabel(Id) {
+            $("#txtModifyCust").val("");
+            $("#txtModifyDevice").val("");
+            $("#txtModifyAttributes").val("");
+        }
+        function DeleteSpecilKnifeInfo(Id) {
+            layer.confirm('确定要删除吗?', {
+                skin: 'layui-layer-lan',
+                icon: 3
+            }, function () {
+                $.ajax({
+                    url: "../SpecilKnifeManage/DeleteInfo",
+                    type: "POST",
+                    dataType: "json",
+                    data: { "Id": Id },
+                    async: false,
+                    success: function (result) {
+                        if (result.Result) {
+                            layer.alert('删除成功', {
+                                skin: 'layui-layer-lan',
+                                title: '删除结果',
+                                closeBtn: 0,
+                                shift: 5, //动画类型
+                                yes: function () {
+                                    layer.closeAll();
+                                    SearchSpecilKnifeList();
+                                }
+                            });
+                        } else {
+                            layer.alert('删除失败' + result.Msg, {
+                                skin: 'layui-layer-lan',
+                                title: '删除结果',
+                                closeBtn: 0,
+                                shift: 6 //动画类型
+                            });
+                        }
+                    }
+                });
+            });
+        }
+
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="row page-header">
+            <h4>特殊产品刀片管控</h4>
+        </div>
+        <div class="row">
+            <form class="form-horizontal">
+                <div class="col-xs-12">
+                    <label class="col-xs-2 control-label">客户:</label>
+                    <div class="form-group col-xs-2">
+                        <input type="text" class="form-control" id="txtCust">
+                    </div>
+                    <label class="col-xs-2 control-label">产品型号:</label>
+                    <div class="form-group col-xs-2">
+                        <input type="text" class="form-control" id="txtDevice">
+                    </div>
+                    <a class="col-xs-1 col-xs-offset-1 btn btn-primary" onclick="SearchSpecilKnifeList();">查询</a>
+                    <a class="col-xs-1 col-xs-offset-1 btn btn-primary" onclick="ShowAddInfo();">新增</a>
+                </div>
+            </form>
+        </div>
+        <div class="row">
+            <table class="table table-bordered table-hover table-striped table-primary">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>客户</th>
+                        <th>型号</th>
+                        <th>添加时间</th>
+                        <th>添加人</th>
+                        <th>备注</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tbSpecilKnifeList"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal fade" id="divAddInfo" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">新增</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <form role="form" class="form-horizontal">
+                            <div class="form-group col-xs-12">
+                                <label class="control-label col-xs-5" for="txtAddCust">客户:</label>
+                                <div class="col-xs-7">
+                                    <input type="text" class="form-control" id="txtAddCust">
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label class="control-label col-xs-5" for="txtAddDevice">型号:</label>
+                                <div class="col-xs-7">
+                                    <input type="text" class="form-control" id="txtAddDevice">
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label class="control-label col-xs-5" for="txtAddAttributes">备注:</label>
+                                <div class="col-xs-7">
+                                    <input type="text" class="form-control" id="txtAddAttributes">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-primary col-xs-offset-3 col-xs-3" onclick="AddInfo();" role="button">
+                        保存
+                    </a>
+                    <a class="btn btn-primary col-xs-offset-1 col-xs-3 " data-dismiss="modal" role="button">取消</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="divModifySpecilKnifeInfo" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">修改</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <form role="form" class="form-horizontal">
+                            <div class="form-group col-xs-12">
+                                <label class="control-label col-xs-5" for="txtModifyCust">客户:</label>
+                                <div class="col-xs-7">
+                                    <input id="txtModifyCust" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label class="control-label col-xs-5" for="txtModifyDevice">型号:</label>
+                                <div class="col-xs-7">
+                                    <input id="txtModifyDevice" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label class="control-label col-xs-5" for="txtModifyAttributes">备注:</label>
+                                <div class="col-xs-7">
+                                    <input id="txtModifyAttributes" class="form-control " />
+                                </div>
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <input id="txtModifyId" type="hidden" />
+                            </div>
+                            <div class="form-group col-xs-12" hidden="hidden">
+                                <div class="radio col-xs-offset-3">
+                                    <label><input type="radio" name="allupdate" value="0"> 更新本次</label>
+                                    <label><input type="radio" name="allupdate" value="1" id="radioAll"> 更新全部</label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-primary col-xs-offset-3 col-xs-3" onclick="ModifySpecilKnifeInfo();" role="button">
+                        保存
+                    </a>
+                    <a class="btn btn-primary col-xs-offset-1 col-xs-3 " data-dismiss="modal" role="button">
+                        取消
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
